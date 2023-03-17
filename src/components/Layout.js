@@ -21,7 +21,7 @@ export default function Layout(params) {
         setUser(null);
       }
     });
-  });
+  },[user]);
 
   async function login() {
     setUser(await auth.signIn());
@@ -48,8 +48,11 @@ export default function Layout(params) {
           </Button>
         )}
       </div>
-
+      <div className='p-8'>
       <Outlet />
+
+      </div>
+
     </div>
   );
 }

@@ -1,7 +1,5 @@
 import Button from '@mui/material/Button';
 import web3 from '../web3';
-import { Polybase } from '@polybase/client';
-import { secp256k1 } from '@polybase/util';
 import { v4 as uuidv4 } from 'uuid';
 import React, { useState, useEffect } from 'react';
 import TextField from '@mui/material/TextField';
@@ -10,19 +8,14 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import {
-  CountryDropdown,
-  RegionDropdown,
-  CountryRegionData,
-} from 'react-country-region-selector';
 import Card from '@mui/material/Card';
 import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import { Link } from 'react-router-dom';
-
+import Autocomplete from '@mui/material/Autocomplete';
 export default function Dashboard(params) {
-  const polybaseIds = [];
+
   const [homes, setHomes] = useState([]);
   const [open, setOpen] = useState(false);
   const [region, setRegion] = useState('');
@@ -33,6 +26,9 @@ export default function Dashboard(params) {
   const [city, setCity] = useState('');
   const [zip, setZip] = useState('');
   const [yearBuilt, setYearBuilt] = useState();
+  const [value, setValue] = React.useState(null);
+  const [inputValue, setInputValue] = React.useState('');
+  const [options, setOptions] = React.useState([]);
 
   const abi = require('../contract/abi.json');
   const contract = new web3.eth.Contract(
@@ -52,16 +48,43 @@ export default function Dashboard(params) {
     loadNFT();
   }, []);
 
-  async function loadNFT() {
-    setHomes([]);
-    const accounts = await web3.eth.getAccounts();
+  useEffect(() => {
+    if (inputValue === '') {
+      setOptions(value ? [value] : []);
+      return undefined;
+    }
+    if (inputValue) {
+      const getData = setTimeout(() => {
+        fetch(
+          'https://api.precisely.com/typeahead/v1/locations?&country=USA&searchText=' +
+            inputValue,
+          {
+            headers: new Headers({
+              Authorization: 'Bearer UAuc9qp6BGc3sIM9j7jEPTVNhLKp',
+              'Content-Type': 'application/x-www-form-urlencoded',
+            }),
+          },
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            if (data) {
+              setOptions(data.location);
+            }
+          });
+      }, 1000);
+      return () => clearTimeout(getData);
+    }
+  }, [inputValue]);
 
-    console.log(accounts);
+  async function loadNFT(userId) {
+    let accounts = await web3.eth.getAccounts();
+
+    setHomes([]);
+
     // get list of tokenIds using the contract getTokenIds
     const userTokenIds = await contract.methods.getTokenIds(accounts[0]).call();
 
     console.log(userTokenIds);
-    const nfts = [];
     userTokenIds.forEach(async (tokenId) => {
       const polybaseUrl = await contract.methods.tokenURI(tokenId).call();
       loadPolybase(polybaseUrl);
@@ -69,7 +92,7 @@ export default function Dashboard(params) {
   }
   async function createPolybase(params) {
     let accounts = await web3.eth.getAccounts();
-    let sig2 = await web3.eth.personal.sign('Test', accounts[0]);
+
     const body = {
       args: [
         uuidv4(),
@@ -83,9 +106,12 @@ export default function Dashboard(params) {
         country,
       ],
     };
-
     const timestamp = Date.now();
-    const xSig = `v=0,t=${timestamp},h=eth-personal-sign,sig=${sig2}`;
+    const sigString = timestamp + '.' + JSON.stringify(body);
+
+    let sig = await web3.eth.personal.sign(sigString, accounts[0]);
+
+    const xSig = `v=0,t=${timestamp},h=eth-personal-sign,sig=${sig}`;
     const requestOptions = {
       method: 'POST',
       headers: {
@@ -152,13 +178,16 @@ export default function Dashboard(params) {
   function handleYearBuiltChange(e) {
     setYearBuilt(e.target.value);
   }
+  function handleStateChange(e) {
+    setRegion(e.target.value);
+  }
 
   return (
     <div>
-      <div>Dashboard</div>
+      <h1>Dashboard</h1>
       <div className="mt-8">
         Your Homes
-        <div className='flex flex-row'>
+        <div className="flex flex-row">
           {homes.map((home, index) => (
             <Card key={index} className="w-56 mr-6">
               <CardContent>
@@ -187,6 +216,8 @@ export default function Dashboard(params) {
       </div>
       <Button onClick={handleClickOpen}>Add Home</Button>
 
+      <div className="mt-8">Recent Activity</div>
+
       <Dialog open={open} onClose={handleClose}>
         <form onSubmit={handleSubmit}>
           <DialogTitle>Add New Home</DialogTitle>
@@ -200,8 +231,71 @@ export default function Dashboard(params) {
               fullWidth
               onChange={handleDescriptionChange}
             />
-            <TextField
-              type={'number'}
+            <Autocomplete
+              id="combo-box-demo"
+              sx={{ width: 500 }}
+              filterOptions={(x) => x}
+              options={options || []}
+              autoComplete
+              includeInputInList
+              filterSelectedOptions
+              value={value}
+              onChange={(event, newValue) => {
+                setOptions(newValue ? [newValue, ...options] : options);
+                setValue(newValue);
+              }}
+              onInputChange={(event, newInputValue) => {
+                setInputValue(newInputValue);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Address" />
+              )}
+              renderOption={(props, option) => (
+                <div  {...props}>
+                   {option?.address?.formattedAddress}
+                </div>
+          )}
+              // renderOption={(props, option) => {
+              //   debugger;
+
+              //   // const matches =
+              //   //   option.structured_formatting.main_text_matched_substrings || [];
+        
+              //   // const parts = parse(
+              //   //   option.structured_formatting.main_text,
+              //   //   matches.map((match) => [match.offset, match.offset + match.length]),
+              //   // );
+              //   const address = option.address;
+        
+              //   return (
+              //     <li {...props}>
+              //       'Test'
+              //       {/* <Grid container alignItems="center">
+              //         <Grid item sx={{ display: 'flex', width: 44 }}>
+              //           <LocationOnIcon sx={{ color: 'text.secondary' }} />
+              //         </Grid>
+              //         <Grid item sx={{ width: 'calc(100% - 44px)', wordWrap: 'break-word' }}>
+              //           {address?.formattedAddress}
+              //          {parts.map((part, index) => (
+              //             <Box
+              //               key={index}
+              //               component="span"
+              //               sx={{ fontWeight: part.highlight ? 'bold' : 'regular' }}
+              //             >
+              //               {part.text}
+              //             </Box>
+              //           ))}
+        
+              //           <Typography variant="body2" color="text.secondary">
+              //             {option.structured_formatting.secondary_text}
+              //           </Typography>
+              //         </Grid>
+              //       </Grid> */}
+              //     </li>
+              //   );
+              // }}
+            />
+            {/* <TextField
               autoFocus
               id="built"
               label="Year Built"
@@ -231,15 +325,22 @@ export default function Dashboard(params) {
               margin="dense"
               onChange={handleCityChange}
             />
-
+            <TextField
+              autoFocus
+              id="state"
+              label="Sate"
+              margin="dense"
+              onChange={handleStateChange}
+            />
             <TextField
               autoFocus
               id="zip"
               label="Zip"
               margin="dense"
               onChange={handleZipChange}
-            />
-            <CountryDropdown
+            /> */}
+
+            {/* <CountryDropdown
               value={country}
               onChange={(val) => setCountry(val)}
             />
@@ -247,11 +348,13 @@ export default function Dashboard(params) {
               country={country}
               value={region}
               onChange={(val) => setRegion(val)}
-            />
+            /> */}
           </DialogContent>
           <DialogActions>
-            <Button className='mt-4' onClick={handleClose}>Cancel</Button>
-            <Button type="submit" onClick={handleClose}>
+            <Button className="mt-4" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button variant="contained" type="submit" onClick={handleClose}>
               Create
             </Button>
           </DialogActions>

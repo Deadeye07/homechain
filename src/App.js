@@ -9,14 +9,15 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Details from './components/Details';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-
+import pink from '@mui/material/colors/pink';
 function App() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
-
+ //const prefersDarkMode = false;
   const theme = React.useMemo(
     () =>
       createTheme({
         palette: {
+          primary: pink,
           mode: prefersDarkMode ? 'dark' : 'light',
         },
       }),
@@ -30,8 +31,8 @@ function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="home" element={<Home />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="house/:id" element={<Details />} />
+            <Route path="dashboard" element={<Dashboard />} />
+          <Route path="house/:id" element={<Details/>} />
 
           <Route path="*" element={<Home />} />
         </Route>

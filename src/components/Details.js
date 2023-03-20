@@ -14,9 +14,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
-import FormControl from '@mui/material/FormControl';
-import Input from '@mui/material/Input';
-import InputLabel from '@mui/material/InputLabel';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import web3 from '../web3';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,36 +25,27 @@ export default function Details(params) {
   const [description, setDescription] = useState('');
   const [cost, setCost] = useState('');
   const [date, setDate] = useState('');
+  const [rows, setRows] = useState([]);
+
+  const polybaseURL =
+    'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2F';
   const columns = [
-    { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'firstName', headerName: 'First name', width: 130 },
-    { field: 'lastName', headerName: 'Last name', width: 130 },
+    { field: 'description', headerName: 'Description', width: 400 },
     {
-      field: 'age',
-      headerName: 'Age',
-      type: 'number',
-      width: 90,
+      field: 'cost',
+      headerName: 'Cost',
+      width: 130,
+      valueFormatter: (params) => (params.value ? '$' + params?.value : ''),
     },
     {
-      field: 'fullName',
-      headerName: 'Full name',
-      description: 'This column has a value getter and is not sortable.',
-      sortable: false,
-      width: 160,
-      valueGetter: (params) =>
-        `${params.row.firstName || ''} ${params.row.lastName || ''}`,
+      field: 'date',
+      headerName: 'Date',
+      width: 200,
+      valueFormatter: (params) =>
+        params.value
+          ? new Date(params?.value).toLocaleString().split(',')[0]
+          : '',
     },
-  ];
-  const rows = [
-    { id: 1, lastName: 'Snow', firstName: 'Jon', age: 35 },
-    { id: 2, lastName: 'Lannister', firstName: 'Cersei', age: 42 },
-    { id: 3, lastName: 'Lannister', firstName: 'Jaime', age: 45 },
-    { id: 4, lastName: 'Stark', firstName: 'Arya', age: 16 },
-    { id: 5, lastName: 'Targaryen', firstName: 'Daenerys', age: null },
-    { id: 6, lastName: 'Melisandre', firstName: null, age: 150 },
-    { id: 7, lastName: 'Clifford', firstName: 'Ferrara', age: 44 },
-    { id: 8, lastName: 'Frances', firstName: 'Rossini', age: 36 },
-    { id: 9, lastName: 'Roxie', firstName: 'Harvey', age: 65 },
   ];
 
   useEffect(() => {
@@ -65,15 +53,25 @@ export default function Details(params) {
   }, []);
 
   function loadHouseDetails() {
-    fetch(
-      'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2FHouse/records/' +
-        id +
-        '?format=nft',
-    )
+    fetch(polybaseURL + 'House/records/' + id + '?format=nft')
       .then((response) => response.json())
       .then((data) => {
         if (data) {
           setHouse(data);
+          if (data.maintenance) {
+            data.maintenance.forEach(async (maintId) => {
+              loadMaintRecord(maintId);
+            });
+          }
+        }
+      });
+  }
+  function loadMaintRecord(id) {
+    fetch(polybaseURL + 'Maintenance/records/' + id + '?format=nft')
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.id) {
+          setRows((oldArray) => [...oldArray, data]);
         }
       });
   }
@@ -87,9 +85,6 @@ export default function Details(params) {
 
   async function handleSubmit(event) {
     event.preventDefault();
-
-    let accounts = await web3.eth.getAccounts();
-    let sig2 = await web3.eth.personal.sign('Test', accounts[0]);
     const newId = uuidv4();
     const updateHouseBody = {
       args: [newId],
@@ -98,7 +93,14 @@ export default function Details(params) {
       args: [newId, description, date, parseInt(cost)],
     };
     const timestamp = Date.now();
-    const xSig = `v=0,t=${timestamp},h=eth-personal-sign,sig=${sig2}`;
+    const sigString = timestamp + '.' + JSON.stringify(updateHouseBody);
+
+    let accounts = await web3.eth.getAccounts();
+
+    let sig = await web3.eth.personal.sign(sigString, accounts[0]);
+
+    const xSig = `v=0,t=${timestamp},h=eth-personal-sign,sig=${sig}`;
+
     const updateRequestOptions = {
       method: 'POST',
       headers: {
@@ -107,6 +109,7 @@ export default function Details(params) {
       },
       body: JSON.stringify(updateHouseBody),
     };
+
     const createRequestOptions = {
       method: 'POST',
       headers: {
@@ -116,18 +119,13 @@ export default function Details(params) {
       body: JSON.stringify(createMaintBody),
     };
     fetch(
-      'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2FHouse/records/' +
-        id +
-        '/call/addMaintenance',
+      polybaseURL + 'House/records/' + id + '/call/addMaintenance',
       updateRequestOptions,
     )
       .then((response) => response.json())
       .then((data) => {});
 
-    fetch(
-      'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2FMaintenance/records',
-      createRequestOptions,
-    )
+    fetch(polybaseURL + 'Maintenance/records', createRequestOptions)
       .then((response) => response.json())
       .then((data) => {});
   }
@@ -138,7 +136,7 @@ export default function Details(params) {
   function handleCostChange(e) {
     setCost(e.target.value);
   }
-  
+
   return (
     <div>
       <Button
@@ -217,7 +215,7 @@ export default function Details(params) {
             </DialogContent>
             <DialogActions>
               <Button onClick={handleClose}>Cancel</Button>
-              <Button type="submit" onClick={handleClose}>
+              <Button variant="contained" type="submit" onClick={handleClose}>
                 Add
               </Button>
             </DialogActions>

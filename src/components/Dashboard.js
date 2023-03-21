@@ -86,7 +86,7 @@ export default function Dashboard(params) {
     if (value) {
       fetch(
         'https://api.precisely.com/property/v1/all/attributes/byaddress?address=' +
-        value.description,
+          value.description,
         {
           headers: new Headers({
             Authorization: 'Bearer iFFGq2E0rMKPCA7wIav1Fq74lsH7',

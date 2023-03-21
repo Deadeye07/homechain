@@ -14,8 +14,6 @@ export default function Layout(params) {
     getAccount();
   }, [user]);
 
-  
-
   return (
     <div>
       <ResponsiveAppBar></ResponsiveAppBar>

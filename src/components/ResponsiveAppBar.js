@@ -155,10 +155,7 @@ function ResponsiveAppBar() {
                 </Button>
               </Tooltip>
             ) : (
-              <Button
-                variant="contained"
-                onClick={login}
-              >
+              <Button variant="contained" onClick={login}>
                 Login
               </Button>
             )}

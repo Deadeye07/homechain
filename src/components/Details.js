@@ -72,10 +72,19 @@ export default function Details(params) {
             });
           }
           // TODO: We need to get the address, call Precisely API to get home details
-          const addressString = data.street1 + ' ' + data.city + ' ' + data.region + ' ' + data.zip + ' ' + data.country
+          const addressString =
+            data.street1 +
+            ' ' +
+            data.city +
+            ' ' +
+            data.region +
+            ' ' +
+            data.zip +
+            ' ' +
+            data.country;
           fetch(
             'https://api.precisely.com/property/v1/all/attributes/byaddress?address=' +
-            addressString,
+              addressString,
             {
               headers: new Headers({
                 Authorization: 'Bearer iFFGq2E0rMKPCA7wIav1Fq74lsH7',
@@ -87,13 +96,13 @@ export default function Details(params) {
             .then((data) => {
               if (data) {
                 const properties = data.individualValueVariable;
-    
+
                 //Bedrooms PROP_BEDRMS
                 const bedRooms = properties.find(
                   (element) => element.name === 'PROP_BEDRMS',
                 );
                 setBedrooms(bedRooms.value);
-    
+
                 //Lot PROP_ACRES
                 const lotSize = properties.find(
                   (element) => element.name === 'PROP_ACRES',
@@ -206,23 +215,23 @@ export default function Details(params) {
             {house.city} {house.zip} {house.region} {house.country}
           </Typography>
           <div className=" mt-2 flex flex-row">
-              <div className="flex flex-col w-1/2">
-                <span className="mb-2">
-                  <LandscapeIcon></LandscapeIcon> Lot:{lotSize}
-                </span>
-                <span>
-                  <CalendarMonthIcon></CalendarMonthIcon> Built:{yearBuilt}
-                </span>
-              </div>
-              <div className="flex flex-col w-1/2">
-                <span className="mb-2">
-                  <BedIcon></BedIcon> Bedrooms: {bedrooms}
-                </span>
-                <span>
-                  <ShowerIcon></ShowerIcon> Baths: {baths}
-                </span>
-              </div>
+            <div className="flex flex-col w-1/2">
+              <span className="mb-2">
+                <LandscapeIcon></LandscapeIcon> Lot:{lotSize}
+              </span>
+              <span>
+                <CalendarMonthIcon></CalendarMonthIcon> Built:{yearBuilt}
+              </span>
             </div>
+            <div className="flex flex-col w-1/2">
+              <span className="mb-2">
+                <BedIcon></BedIcon> Bedrooms: {bedrooms}
+              </span>
+              <span>
+                <ShowerIcon></ShowerIcon> Baths: {baths}
+              </span>
+            </div>
+          </div>
         </CardContent>
         <CardActions>
           <Button size="small">Transfer</Button>

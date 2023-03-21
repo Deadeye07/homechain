@@ -14,8 +14,31 @@ import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import { Link } from 'react-router-dom';
 import Autocomplete from '@mui/material/Autocomplete';
-export default function Dashboard(params) {
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import LandscapeIcon from '@mui/icons-material/Landscape';
+import BedIcon from '@mui/icons-material/Bed';
+import ShowerIcon from '@mui/icons-material/Shower';
+import Box from '@mui/material/Box';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import Grid from '@mui/material/Grid';
+import parse from 'autosuggest-highlight/parse';
+import { debounce } from '@mui/material/utils';
+const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_MAPS;
+function loadScript(src, position, id) {
+  if (!position) {
+    return;
+  }
 
+  const script = document.createElement('script');
+  script.setAttribute('async', '');
+  script.setAttribute('id', id);
+  script.src = src;
+  position.appendChild(script);
+}
+
+const autocompleteService = { current: null };
+
+export default function Dashboard(params) {
   const [homes, setHomes] = useState([]);
   const [open, setOpen] = useState(false);
   const [region, setRegion] = useState('');
@@ -25,11 +48,27 @@ export default function Dashboard(params) {
   const [line2, setLine2] = useState('');
   const [city, setCity] = useState('');
   const [zip, setZip] = useState('');
+  const [addressSelection, setAddressSelection] = React.useState(null);
+  const [lotSize, setLotSize] = React.useState('');
+  const [bedrooms, setBedrooms] = React.useState('');
+  const [baths, setBaths] = React.useState('');
   const [yearBuilt, setYearBuilt] = useState();
   const [value, setValue] = React.useState(null);
   const [inputValue, setInputValue] = React.useState('');
   const [options, setOptions] = React.useState([]);
+  const loaded = React.useRef(false);
 
+  if (typeof window !== 'undefined' && !loaded.current) {
+    if (!document.querySelector('#google-maps')) {
+      loadScript(
+        `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`,
+        document.querySelector('head'),
+        'google-maps',
+      );
+    }
+
+    loaded.current = true;
+  }
   const abi = require('../contract/abi.json');
   const contract = new web3.eth.Contract(
     abi,
@@ -43,38 +82,96 @@ export default function Dashboard(params) {
   const handleClose = () => {
     setOpen(false);
   };
+  useEffect(() => {
+    if (value) {
+      fetch(
+        'https://api.precisely.com/property/v1/all/attributes/byaddress?address=' +
+        value.description,
+        {
+          headers: new Headers({
+            Authorization: 'Bearer iFFGq2E0rMKPCA7wIav1Fq74lsH7',
+            'Content-Type': 'application/x-www-form-urlencoded',
+          }),
+        },
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          if (data) {
+            const properties = data.individualValueVariable;
+
+            //Bedrooms PROP_BEDRMS
+            const bedRooms = properties.find(
+              (element) => element.name === 'PROP_BEDRMS',
+            );
+            setBedrooms(bedRooms.value);
+
+            //Lot PROP_ACRES
+            const lotSize = properties.find(
+              (element) => element.name === 'PROP_ACRES',
+            );
+            setLotSize(lotSize.value);
+            //Year Built PROP_YRBLD
+            const yearBuilt = properties.find(
+              (element) => element.name === 'PROP_YRBLD',
+            );
+            setYearBuilt(yearBuilt.value);
+            //Baths PROP_BATHSCALC
+            const baths = properties.find(
+              (element) => element.name === 'PROP_BATHSCALC',
+            );
+            setBaths(baths.value);
+          }
+        });
+    }
+  }, [value]);
 
   useEffect(() => {
     loadNFT();
   }, []);
 
-  useEffect(() => {
+  const getAddress = React.useMemo(
+    () =>
+      debounce((request, callback) => {
+        autocompleteService.current.getPlacePredictions(request, callback);
+      }, 400),
+    [],
+  );
+  React.useEffect(() => {
+    let active = true;
+
+    if (!autocompleteService.current && window.google) {
+      autocompleteService.current =
+        new window.google.maps.places.AutocompleteService();
+    }
+    if (!autocompleteService.current) {
+      return undefined;
+    }
+
     if (inputValue === '') {
       setOptions(value ? [value] : []);
       return undefined;
     }
-    if (inputValue) {
-      const getData = setTimeout(() => {
-        fetch(
-          'https://api.precisely.com/typeahead/v1/locations?&country=USA&searchText=' +
-            inputValue,
-          {
-            headers: new Headers({
-              Authorization: 'Bearer UAuc9qp6BGc3sIM9j7jEPTVNhLKp',
-              'Content-Type': 'application/x-www-form-urlencoded',
-            }),
-          },
-        )
-          .then((response) => response.json())
-          .then((data) => {
-            if (data) {
-              setOptions(data.location);
-            }
-          });
-      }, 1000);
-      return () => clearTimeout(getData);
-    }
-  }, [inputValue]);
+
+    getAddress({ input: inputValue }, (results) => {
+      if (active) {
+        let newOptions = [];
+
+        if (value) {
+          newOptions = [value];
+        }
+
+        if (results) {
+          newOptions = [...newOptions, ...results];
+        }
+
+        setOptions(newOptions);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [value, inputValue, getAddress]);
 
   async function loadNFT(userId) {
     let accounts = await web3.eth.getAccounts();
@@ -84,7 +181,6 @@ export default function Dashboard(params) {
     // get list of tokenIds using the contract getTokenIds
     const userTokenIds = await contract.methods.getTokenIds(accounts[0]).call();
 
-    console.log(userTokenIds);
     userTokenIds.forEach(async (tokenId) => {
       const polybaseUrl = await contract.methods.tokenURI(tokenId).call();
       loadPolybase(polybaseUrl);
@@ -97,13 +193,13 @@ export default function Dashboard(params) {
       args: [
         uuidv4(),
         description,
-        parseInt(yearBuilt),
-        line1,
-        line2,
-        city,
-        region,
-        zip,
-        country,
+        0,
+        addressSelection.address.mainAddressLine,
+        '',
+        addressSelection.address.areaName3,
+        addressSelection.address.areaName1,
+        addressSelection.address.postCode,
+        addressSelection.address.country,
       ],
     };
     const timestamp = Date.now();
@@ -141,10 +237,8 @@ export default function Dashboard(params) {
       )
       .send({ from: accounts[0] }, function (err, res) {
         if (err) {
-          console.log('An error occurred', err);
           return;
         }
-        console.log('Hash of the transaction: ' + res);
       });
   }
   function loadPolybase(polybaseUrl) {
@@ -184,13 +278,12 @@ export default function Dashboard(params) {
 
   return (
     <div>
-      <h1>Dashboard</h1>
       <div className="mt-8">
         Your Homes
         <div className="flex flex-row">
           {homes.map((home, index) => (
             <Card key={index} className="w-56 mr-6">
-              <CardContent>
+              <CardContent className="h-[80%]">
                 <Typography
                   sx={{ fontSize: 14 }}
                   color="text.secondary"
@@ -222,7 +315,7 @@ export default function Dashboard(params) {
         <form onSubmit={handleSubmit}>
           <DialogTitle>Add New Home</DialogTitle>
           <DialogContent>
-            <DialogContentText>Enter in home information.</DialogContentText>
+            <DialogContentText>Enter home information.</DialogContentText>
             <TextField
               autoFocus
               margin="dense"
@@ -232,14 +325,18 @@ export default function Dashboard(params) {
               onChange={handleDescriptionChange}
             />
             <Autocomplete
-              id="combo-box-demo"
-              sx={{ width: 500 }}
+              id="google-map-demo"
+              sx={{ width: 300 }}
+              getOptionLabel={(option) =>
+                typeof option === 'string' ? option : option.description
+              }
               filterOptions={(x) => x}
-              options={options || []}
+              options={options}
               autoComplete
               includeInputInList
               filterSelectedOptions
               value={value}
+              noOptionsText="No locations"
               onChange={(event, newValue) => {
                 setOptions(newValue ? [newValue, ...options] : options);
                 setValue(newValue);
@@ -248,113 +345,85 @@ export default function Dashboard(params) {
                 setInputValue(newInputValue);
               }}
               renderInput={(params) => (
-                <TextField {...params} label="Address" />
+                <TextField {...params} label="Add a location" fullWidth />
               )}
-              renderOption={(props, option) => (
-                <div  {...props}>
-                   {option?.address?.formattedAddress}
-                </div>
-          )}
-              // renderOption={(props, option) => {
-              //   debugger;
+              renderOption={(props, option) => {
+                const matches =
+                  option.structured_formatting.main_text_matched_substrings ||
+                  [];
 
-              //   // const matches =
-              //   //   option.structured_formatting.main_text_matched_substrings || [];
-        
-              //   // const parts = parse(
-              //   //   option.structured_formatting.main_text,
-              //   //   matches.map((match) => [match.offset, match.offset + match.length]),
-              //   // );
-              //   const address = option.address;
-        
-              //   return (
-              //     <li {...props}>
-              //       'Test'
-              //       {/* <Grid container alignItems="center">
-              //         <Grid item sx={{ display: 'flex', width: 44 }}>
-              //           <LocationOnIcon sx={{ color: 'text.secondary' }} />
-              //         </Grid>
-              //         <Grid item sx={{ width: 'calc(100% - 44px)', wordWrap: 'break-word' }}>
-              //           {address?.formattedAddress}
-              //          {parts.map((part, index) => (
-              //             <Box
-              //               key={index}
-              //               component="span"
-              //               sx={{ fontWeight: part.highlight ? 'bold' : 'regular' }}
-              //             >
-              //               {part.text}
-              //             </Box>
-              //           ))}
-        
-              //           <Typography variant="body2" color="text.secondary">
-              //             {option.structured_formatting.secondary_text}
-              //           </Typography>
-              //         </Grid>
-              //       </Grid> */}
-              //     </li>
-              //   );
-              // }}
-            />
-            {/* <TextField
-              autoFocus
-              id="built"
-              label="Year Built"
-              margin="dense"
-              onChange={handleYearBuiltChange}
-            />
-            <TextField
-              autoFocus
-              id="line1"
-              label="Line 1"
-              margin="dense"
-              fullWidth
-              onChange={handleLine1Change}
-            />
-            <TextField
-              autoFocus
-              id="line2"
-              label="Line 2"
-              margin="dense"
-              fullWidth
-              onChange={handleLine2Change}
-            />
-            <TextField
-              autoFocus
-              id="city"
-              label="City"
-              margin="dense"
-              onChange={handleCityChange}
-            />
-            <TextField
-              autoFocus
-              id="state"
-              label="Sate"
-              margin="dense"
-              onChange={handleStateChange}
-            />
-            <TextField
-              autoFocus
-              id="zip"
-              label="Zip"
-              margin="dense"
-              onChange={handleZipChange}
-            /> */}
+                const parts = parse(
+                  option.structured_formatting.main_text,
+                  matches.map((match) => [
+                    match.offset,
+                    match.offset + match.length,
+                  ]),
+                );
 
-            {/* <CountryDropdown
-              value={country}
-              onChange={(val) => setCountry(val)}
+                return (
+                  <li {...props}>
+                    <Grid container alignItems="center">
+                      <Grid item sx={{ display: 'flex', width: 44 }}>
+                        <LocationOnIcon sx={{ color: 'text.secondary' }} />
+                      </Grid>
+                      <Grid
+                        item
+                        sx={{
+                          width: 'calc(100% - 44px)',
+                          wordWrap: 'break-word',
+                        }}
+                      >
+                        {parts.map((part, index) => (
+                          <Box
+                            key={index}
+                            component="span"
+                            sx={{
+                              fontWeight: part.highlight ? 'bold' : 'regular',
+                            }}
+                          >
+                            {part.text}
+                          </Box>
+                        ))}
+
+                        <Typography variant="body2" color="text.secondary">
+                          {option.structured_formatting.secondary_text}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </li>
+                );
+              }}
             />
-            <RegionDropdown
-              country={country}
-              value={region}
-              onChange={(val) => setRegion(val)}
-            /> */}
+            <div className="mt-4">Details</div>
+            <div className=" mt-2 flex flex-row">
+              <div className="flex flex-col w-1/2">
+                <span className="mb-2">
+                  <LandscapeIcon></LandscapeIcon> Lot:{lotSize}
+                </span>
+                <span>
+                  <CalendarMonthIcon></CalendarMonthIcon> Built:{yearBuilt}
+                </span>
+              </div>
+              <div className="flex flex-col w-1/2">
+                <span className="mb-2">
+                  <BedIcon></BedIcon> Bedrooms: {bedrooms}
+                </span>
+                <span>
+                  <ShowerIcon></ShowerIcon> Baths: {baths}
+                </span>
+              </div>
+            </div>
           </DialogContent>
           <DialogActions>
             <Button className="mt-4" onClick={handleClose}>
               Cancel
             </Button>
-            <Button variant="contained" type="submit" onClick={handleClose}>
+            <Button
+              disabled={!addressSelection || !description}
+              variant="contained"
+              type="submit"
+              onClick={handleClose}
+            >
               Create
             </Button>
           </DialogActions>

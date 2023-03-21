@@ -26,7 +26,11 @@ function ResponsiveAppBar() {
   useEffect(() => {
     async function getAccount() {
       const accounts = await web3.eth.getAccounts();
-      setUser(accounts[0]);
+      if (accounts.length === 0) {
+        setUser(null);
+      } else {
+        setUser(accounts[0]);
+      }
     }
     let accounts = getAccount();
   }, [user]);
@@ -45,7 +49,11 @@ function ResponsiveAppBar() {
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
   };
-
+  async function login() {
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const accounts = await web3.eth.getAccounts();
+    setUser(accounts[0]);
+  }
   return (
     <AppBar position="static">
       <Container maxWidth="full">
@@ -136,15 +144,25 @@ function ResponsiveAppBar() {
           </Box>
 
           <Box sx={{ flexGrow: 0 }}>
-            <Tooltip title="Open settings">
+            {user ? (
+              <Tooltip title="Open settings">
+                <Button
+                  variant="contained"
+                  startIcon={<Fingerprint />}
+                  onClick={handleOpenUserMenu}
+                >
+                  Acct. ...{user?.slice(-4)}
+                </Button>
+              </Tooltip>
+            ) : (
               <Button
                 variant="contained"
-                startIcon={<Fingerprint />}
-                onClick={handleOpenUserMenu}
+                onClick={login}
               >
-                Acct. ...{user?.slice(-4)}
+                Login
               </Button>
-            </Tooltip>
+            )}
+
             <Menu
               sx={{ mt: '45px' }}
               id="menu-appbar"
@@ -168,12 +186,9 @@ function ResponsiveAppBar() {
               > 
                 <Typography textAlign="center">Dashboard</Typography>
               </MenuItem>*/}
-                      <MenuItem
-        
-                onClick={handleCloseUserMenu}
-              > 
+              <MenuItem onClick={handleCloseUserMenu}>
                 <Typography textAlign="center">Logout</Typography>
-              </MenuItem>    
+              </MenuItem>
             </Menu>
           </Box>
         </Toolbar>

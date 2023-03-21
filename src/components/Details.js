@@ -17,6 +17,11 @@ import InputAdornment from '@mui/material/InputAdornment';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import web3 from '../web3';
 import { v4 as uuidv4 } from 'uuid';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import LandscapeIcon from '@mui/icons-material/Landscape';
+import HouseIcon from '@mui/icons-material/House';
+import BedIcon from '@mui/icons-material/Bed';
+import ShowerIcon from '@mui/icons-material/Shower';
 
 export default function Details(params) {
   const { id } = useParams();
@@ -26,7 +31,10 @@ export default function Details(params) {
   const [cost, setCost] = useState('');
   const [date, setDate] = useState('');
   const [rows, setRows] = useState([]);
-
+  const [lotSize, setLotSize] = React.useState('');
+  const [bedrooms, setBedrooms] = React.useState('');
+  const [baths, setBaths] = React.useState('');
+  const [yearBuilt, setYearBuilt] = useState();
   const polybaseURL =
     'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2F';
   const columns = [
@@ -63,6 +71,46 @@ export default function Details(params) {
               loadMaintRecord(maintId);
             });
           }
+          // TODO: We need to get the address, call Precisely API to get home details
+          const addressString = data.street1 + ' ' + data.city + ' ' + data.region + ' ' + data.zip + ' ' + data.country
+          fetch(
+            'https://api.precisely.com/property/v1/all/attributes/byaddress?address=' +
+            addressString,
+            {
+              headers: new Headers({
+                Authorization: 'Bearer iFFGq2E0rMKPCA7wIav1Fq74lsH7',
+                'Content-Type': 'application/x-www-form-urlencoded',
+              }),
+            },
+          )
+            .then((response) => response.json())
+            .then((data) => {
+              if (data) {
+                const properties = data.individualValueVariable;
+    
+                //Bedrooms PROP_BEDRMS
+                const bedRooms = properties.find(
+                  (element) => element.name === 'PROP_BEDRMS',
+                );
+                setBedrooms(bedRooms.value);
+    
+                //Lot PROP_ACRES
+                const lotSize = properties.find(
+                  (element) => element.name === 'PROP_ACRES',
+                );
+                setLotSize(lotSize.value);
+                //Year Built PROP_YRBLD
+                const yearBuilt = properties.find(
+                  (element) => element.name === 'PROP_YRBLD',
+                );
+                setYearBuilt(yearBuilt.value);
+                //Baths PROP_BATHSCALC
+                const baths = properties.find(
+                  (element) => element.name === 'PROP_BATHSCALC',
+                );
+                setBaths(baths.value);
+              }
+            });
         }
       });
   }
@@ -146,7 +194,7 @@ export default function Details(params) {
       >
         Dashboard
       </Button>
-      <Card className="w-56 mb-12 mt-4">
+      <Card className="w-3/4 mb-12 mt-4">
         <CardContent>
           <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
             {house?.name}
@@ -157,6 +205,24 @@ export default function Details(params) {
           <Typography variant="body2">
             {house.city} {house.zip} {house.region} {house.country}
           </Typography>
+          <div className=" mt-2 flex flex-row">
+              <div className="flex flex-col w-1/2">
+                <span className="mb-2">
+                  <LandscapeIcon></LandscapeIcon> Lot:{lotSize}
+                </span>
+                <span>
+                  <CalendarMonthIcon></CalendarMonthIcon> Built:{yearBuilt}
+                </span>
+              </div>
+              <div className="flex flex-col w-1/2">
+                <span className="mb-2">
+                  <BedIcon></BedIcon> Bedrooms: {bedrooms}
+                </span>
+                <span>
+                  <ShowerIcon></ShowerIcon> Baths: {baths}
+                </span>
+              </div>
+            </div>
         </CardContent>
         <CardActions>
           <Button size="small">Transfer</Button>

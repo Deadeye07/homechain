@@ -28,6 +28,7 @@ export default function Details(params) {
   const [house, setHouse] = useState({});
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState('');
+  const [contractor, setContractor] = useState('');
   const [cost, setCost] = useState('');
   const [date, setDate] = useState('');
   const [rows, setRows] = useState([]);
@@ -39,6 +40,7 @@ export default function Details(params) {
     'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2F';
   const columns = [
     { field: 'description', headerName: 'Description', width: 400 },
+    { field: 'contractor', headerName: 'Contractor', width: 300 },
     {
       field: 'cost',
       headerName: 'Cost',
@@ -87,7 +89,7 @@ export default function Details(params) {
               addressString,
             {
               headers: new Headers({
-                Authorization: 'Bearer iFFGq2E0rMKPCA7wIav1Fq74lsH7',
+                Authorization: 'Bearer ' + global.preciselyToken,
                 'Content-Type': 'application/x-www-form-urlencoded',
               }),
             },
@@ -147,7 +149,7 @@ export default function Details(params) {
       args: [newId],
     };
     const createMaintBody = {
-      args: [newId, description, date, parseInt(cost)],
+      args: [newId, description, contractor, date, parseInt(cost)],
     };
     const timestamp = Date.now();
     const sigString = timestamp + '.' + JSON.stringify(updateHouseBody);
@@ -192,6 +194,9 @@ export default function Details(params) {
   }
   function handleCostChange(e) {
     setCost(e.target.value);
+  }
+  function handleContractorChange(e) {
+    setContractor(e.target.value)
   }
 
   return (
@@ -268,6 +273,14 @@ export default function Details(params) {
                 multiline
                 maxRows={4}
                 onChange={handleDescriptionChange}
+              />
+              <TextField
+                autoFocus
+                margin="dense"
+                id="contractor"
+                label="Contractor"
+                fullWidth
+                onChange={handleContractorChange}
               />
               <div className="mt-2 flex flex-col">
                 <DatePicker

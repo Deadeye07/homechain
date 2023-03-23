@@ -89,7 +89,7 @@ export default function Dashboard(params) {
           value.description,
         {
           headers: new Headers({
-            Authorization: 'Bearer iFFGq2E0rMKPCA7wIav1Fq74lsH7',
+            Authorization: 'Bearer ' + global.preciselyToken,
             'Content-Type': 'application/x-www-form-urlencoded',
           }),
         },

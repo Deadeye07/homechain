@@ -85,7 +85,6 @@ export default function Dashboard(params) {
 	};
 	useEffect(() => {
 		if (value) {
-
 			fetch(
 				'https://api.precisely.com/property/v1/all/attributes/byaddress?address=' +
 					value.description,
@@ -293,11 +292,13 @@ export default function Dashboard(params) {
 	return (
 		<div>
 			<div className="mt-8">
-				Your Homes
-				<div className="flex flex-row">
+				<Typography variant="h5" color="text.secondary" gutterBottom>
+					Your Homes
+				</Typography>{' '}
+				<div className="flex flex-row mb-2">
 					{homes.map((home, index) => (
 						<Card key={index} className="w-56 mr-6">
-							<CardContent className="h-[80%]">
+							<CardContent className="h-[75%]">
 								<Typography
 									sx={{ fontSize: 14 }}
 									color="text.secondary"
@@ -326,9 +327,9 @@ export default function Dashboard(params) {
 					))}
 				</div>
 			</div>
-			<Button onClick={handleClickOpen}>Add Home</Button>
-
-			<div className="mt-8">Recent Activity</div>
+			<Button variant="contained" onClick={handleClickOpen}>
+				Add Home
+			</Button>
 
 			<Dialog open={open} onClose={handleClose}>
 				<form onSubmit={handleSubmit}>

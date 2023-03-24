@@ -208,7 +208,7 @@ export default function Details(params) {
       >
         Dashboard
       </Button>
-      <Card className="w-3/4 mb-12 mt-4">
+      <div className="w-3/4 mb-12 mt-4">
         <CardContent>
           <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
             {house?.name}
@@ -238,12 +238,10 @@ export default function Details(params) {
             </div>
           </div>
         </CardContent>
-        <CardActions>
-          <Button size="small">Transfer</Button>
-        </CardActions>
-      </Card>
+        
+      </div>
       Maintenance History
-      <Box sx={{ height: 500, width: '75%' }}>
+      <Box className='mb-2' sx={{ height: 500, width: '75%' }}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -258,9 +256,9 @@ export default function Details(params) {
           disableRowSelectionOnClick
         />
       </Box>
-      <Button onClick={handleClickOpen}>Add New</Button>
+      <Button variant="contained" onClick={handleClickOpen}>Add New</Button>
       <Dialog open={open} onClose={handleClose}>
-        <Box sx={{ height: 420, width: 500 }}>
+        <Box sx={{ height: 500, width: 500 }}>
           <form onSubmit={handleSubmit}>
             <DialogTitle>Add New Maintenance</DialogTitle>
             <DialogContent>
@@ -271,11 +269,11 @@ export default function Details(params) {
                 label="Description"
                 fullWidth
                 multiline
+                rows={4}
                 maxRows={4}
                 onChange={handleDescriptionChange}
               />
               <TextField
-                autoFocus
                 margin="dense"
                 id="contractor"
                 label="Contractor"

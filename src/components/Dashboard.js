@@ -25,6 +25,8 @@ import parse from 'autosuggest-highlight/parse';
 import { debounce } from '@mui/material/utils';
 import GooglePlacesService from '../services/GooglePlacesService';
 import Parser from 'parse-address';
+import { secp256k1, decodeFromString, encodeToString, EncryptedDataSecp256k1 } from '@polybase/util';
+
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_MAPS;
 function loadScript(src, position, id) {
 	if (!position) {
@@ -99,7 +101,7 @@ export default function Dashboard(params) {
 			)
 				.then((response) => response.json())
 				.then((data) => {
-					if (data) {
+                    if (data && data.individualValueVariable) {
 						const properties = data.individualValueVariable;
 
 						//Bedrooms PROP_BEDRMS
@@ -193,23 +195,35 @@ export default function Dashboard(params) {
 			const polybaseUrl = await contract.methods.tokenURI(tokenId).call();
 			loadPolybase(polybaseUrl);
 		});
-	}
-	async function createPolybase(params) {
-		let accounts = await web3.eth.getAccounts();
-		let addressSelection = Parser.parseLocation(value.description);
-		const streetLine = [
-			addressSelection.number,
-			addressSelection.prefix,
-			addressSelection.street,
-			addressSelection.type,
-		].join(' ');
+    }
+    
+    async function parseAddressDetails () {
+        let addressDetails = {};
+        try {
+            const placeRes = await GooglePlacesService.getPlaceDetails(value.place_id);
+            return placeRes.data;
+        } catch (error) {
+            let addressSelection = Parser.parseLocation(value.description);
+            addressSelection.streetLine = [
+                addressSelection.number,
+                addressSelection.prefix,
+                addressSelection.street,
+                addressSelection.type,
+            ].join(' ');
+            return addressSelection;
+        }
+    }
 
+    async function createPolybase(params) {
+        let accounts = await web3.eth.getAccounts();
+        const addressSelection = await parseAddressDetails();
+        console.log(addressSelection);
 		const body = {
 			args: [
 				uuidv4(),
 				description,
 				0,
-				streetLine,
+				addressSelection.streetLine,
 				'',
 				addressSelection.city,
 				addressSelection.state,

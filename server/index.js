@@ -36,8 +36,8 @@ function parseAddress(placeDetails) {
     let address_components = placeDetails.result.address_components;
 
     const placeTypes = {
-        street_number: ["street_number"],
-        postal_code: ["postal_code"],
+        streetNumber: ["street_number"],
+        zip: ["postal_code"],
         street: ["street_address", "route"],
         state: [
             "administrative_area_level_1",
@@ -58,8 +58,8 @@ function parseAddress(placeDetails) {
     };
 
     const address = {
-        street_number: "",
-        postal_code: "",
+        streetNumber: "",
+        zip: "",
         street: "",
         state: "",
         city: "",
@@ -77,6 +77,7 @@ function parseAddress(placeDetails) {
             }
         }
     });
+    address.streetLine = `${address.streetNumber} ${address.street}`;
     return address;
 }
 

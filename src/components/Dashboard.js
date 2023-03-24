@@ -23,412 +23,463 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import Grid from '@mui/material/Grid';
 import parse from 'autosuggest-highlight/parse';
 import { debounce } from '@mui/material/utils';
+import Parser from 'parse-address';
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_MAPS;
 function loadScript(src, position, id) {
-  if (!position) {
-    return;
-  }
+	if (!position) {
+		return;
+	}
 
-  const script = document.createElement('script');
-  script.setAttribute('async', '');
-  script.setAttribute('id', id);
-  script.src = src;
-  position.appendChild(script);
+	const script = document.createElement('script');
+	script.setAttribute('async', '');
+	script.setAttribute('id', id);
+	script.src = src;
+	position.appendChild(script);
 }
 
 const autocompleteService = { current: null };
 
 export default function Dashboard(params) {
-  const [homes, setHomes] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [region, setRegion] = useState('');
-  const [country, setCountry] = useState('');
-  const [description, setDescription] = useState('');
-  const [line1, setLine1] = useState('');
-  const [line2, setLine2] = useState('');
-  const [city, setCity] = useState('');
-  const [zip, setZip] = useState('');
-  const [addressSelection, setAddressSelection] = React.useState(null);
-  const [lotSize, setLotSize] = React.useState('');
-  const [bedrooms, setBedrooms] = React.useState('');
-  const [baths, setBaths] = React.useState('');
-  const [yearBuilt, setYearBuilt] = useState();
-  const [value, setValue] = React.useState(null);
-  const [inputValue, setInputValue] = React.useState('');
-  const [options, setOptions] = React.useState([]);
-  const loaded = React.useRef(false);
+	const [homes, setHomes] = useState([]);
+	const [open, setOpen] = useState(false);
+	const [region, setRegion] = useState('');
+	const [country, setCountry] = useState('');
+	const [description, setDescription] = useState('');
+	const [line1, setLine1] = useState('');
+	const [line2, setLine2] = useState('');
+	const [city, setCity] = useState('');
+	const [zip, setZip] = useState('');
+	const [addressSelection, setAddressSelection] = React.useState(null);
+	const [lotSize, setLotSize] = React.useState('');
+	const [bedrooms, setBedrooms] = React.useState('');
+	const [baths, setBaths] = React.useState('');
+	const [yearBuilt, setYearBuilt] = useState();
+	const [value, setValue] = React.useState(null);
+	const [inputValue, setInputValue] = React.useState('');
+	const [options, setOptions] = React.useState([]);
+	const loaded = React.useRef(false);
 
-  if (typeof window !== 'undefined' && !loaded.current) {
-    if (!document.querySelector('#google-maps')) {
-      loadScript(
-        `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`,
-        document.querySelector('head'),
-        'google-maps',
-      );
-    }
+	if (typeof window !== 'undefined' && !loaded.current) {
+		if (!document.querySelector('#google-maps')) {
+			loadScript(
+				`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`,
+				document.querySelector('head'),
+				'google-maps',
+			);
+		}
 
-    loaded.current = true;
-  }
-  const abi = require('../contract/abi.json');
-  const contract = new web3.eth.Contract(
-    abi,
-    '0x99B5A7960aFf7A27f064Bd0d79611BBe5a36C9E0',
-  );
+		loaded.current = true;
+	}
+	const abi = require('../contract/abi.json');
+	const contract = new web3.eth.Contract(
+		abi,
+		'0x99B5A7960aFf7A27f064Bd0d79611BBe5a36C9E0',
+	);
 
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
+	const handleClickOpen = () => {
+		setOpen(true);
+	};
 
-  const handleClose = () => {
-    setOpen(false);
-  };
-  useEffect(() => {
-    if (value) {
-      fetch(
-        'https://api.precisely.com/property/v1/all/attributes/byaddress?address=' +
-          value.description,
-        {
-          headers: new Headers({
-            Authorization: 'Bearer ' + global.preciselyToken,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          }),
-        },
-      )
-        .then((response) => response.json())
-        .then((data) => {
-          if (data) {
-            const properties = data.individualValueVariable;
+	const handleClose = () => {
+		setOpen(false);
+	};
+	useEffect(() => {
+		if (value) {
 
-            //Bedrooms PROP_BEDRMS
-            const bedRooms = properties.find(
-              (element) => element.name === 'PROP_BEDRMS',
-            );
-            setBedrooms(bedRooms.value);
+			fetch(
+				'https://api.precisely.com/property/v1/all/attributes/byaddress?address=' +
+					value.description,
+				{
+					headers: new Headers({
+						Authorization: 'Bearer ' + global.preciselyToken,
+						'Content-Type': 'application/x-www-form-urlencoded',
+					}),
+				},
+			)
+				.then((response) => response.json())
+				.then((data) => {
+					if (data) {
+						const properties = data.individualValueVariable;
 
-            //Lot PROP_ACRES
-            const lotSize = properties.find(
-              (element) => element.name === 'PROP_ACRES',
-            );
-            setLotSize(lotSize.value);
-            //Year Built PROP_YRBLD
-            const yearBuilt = properties.find(
-              (element) => element.name === 'PROP_YRBLD',
-            );
-            setYearBuilt(yearBuilt.value);
-            //Baths PROP_BATHSCALC
-            const baths = properties.find(
-              (element) => element.name === 'PROP_BATHSCALC',
-            );
-            setBaths(baths.value);
-          }
-        });
-    }
-  }, [value]);
+						//Bedrooms PROP_BEDRMS
+						const bedRooms = properties.find(
+							(element) => element.name === 'PROP_BEDRMS',
+						);
+						setBedrooms(bedRooms.value);
 
-  useEffect(() => {
-    loadNFT();
-  }, []);
+						//Lot PROP_ACRES
+						const lotSize = properties.find(
+							(element) => element.name === 'PROP_ACRES',
+						);
+						setLotSize(lotSize.value);
+						//Year Built PROP_YRBLD
+						const yearBuilt = properties.find(
+							(element) => element.name === 'PROP_YRBLD',
+						);
+						setYearBuilt(yearBuilt.value);
+						//Baths PROP_BATHSCALC
+						const baths = properties.find(
+							(element) => element.name === 'PROP_BATHSCALC',
+						);
+						setBaths(baths.value);
+					}
+				});
+		}
+	}, [value]);
 
-  const getAddress = React.useMemo(
-    () =>
-      debounce((request, callback) => {
-        autocompleteService.current.getPlacePredictions(request, callback);
-      }, 400),
-    [],
-  );
-  React.useEffect(() => {
-    let active = true;
+	useEffect(() => {
+		loadNFT();
+	}, []);
 
-    if (!autocompleteService.current && window.google) {
-      autocompleteService.current =
-        new window.google.maps.places.AutocompleteService();
-    }
-    if (!autocompleteService.current) {
-      return undefined;
-    }
+	const getAddress = React.useMemo(
+		() =>
+			debounce((request, callback) => {
+				autocompleteService.current.getPlacePredictions(
+					request,
+					callback,
+				);
+			}, 400),
+		[],
+	);
+	React.useEffect(() => {
+		let active = true;
 
-    if (inputValue === '') {
-      setOptions(value ? [value] : []);
-      return undefined;
-    }
+		if (!autocompleteService.current && window.google) {
+			autocompleteService.current =
+				new window.google.maps.places.AutocompleteService();
+		}
+		if (!autocompleteService.current) {
+			return undefined;
+		}
 
-    getAddress({ input: inputValue }, (results) => {
-      if (active) {
-        let newOptions = [];
+		if (inputValue === '') {
+			setOptions(value ? [value] : []);
+			return undefined;
+		}
 
-        if (value) {
-          newOptions = [value];
-        }
+		getAddress({ input: inputValue }, (results) => {
+			if (active) {
+				let newOptions = [];
 
-        if (results) {
-          newOptions = [...newOptions, ...results];
-        }
+				if (value) {
+					newOptions = [value];
+				}
 
-        setOptions(newOptions);
-      }
-    });
+				if (results) {
+					newOptions = [...newOptions, ...results];
+				}
 
-    return () => {
-      active = false;
-    };
-  }, [value, inputValue, getAddress]);
+				setOptions(newOptions);
+			}
+		});
 
-  async function loadNFT(userId) {
-    let accounts = await web3.eth.getAccounts();
+		return () => {
+			active = false;
+		};
+	}, [value, inputValue, getAddress]);
 
-    setHomes([]);
+	async function loadNFT(userId) {
+		let accounts = await web3.eth.getAccounts();
 
-    // get list of tokenIds using the contract getTokenIds
-    const userTokenIds = await contract.methods.getTokenIds(accounts[0]).call();
+		setHomes([]);
 
-    userTokenIds.forEach(async (tokenId) => {
-      const polybaseUrl = await contract.methods.tokenURI(tokenId).call();
-      loadPolybase(polybaseUrl);
-    });
-  }
-  async function createPolybase(params) {
-    let accounts = await web3.eth.getAccounts();
+		// get list of tokenIds using the contract getTokenIds
+		const userTokenIds = await contract.methods
+			.getTokenIds(accounts[0])
+			.call();
 
-    const body = {
-      args: [
-        uuidv4(),
-        description,
-        0,
-        addressSelection.address.mainAddressLine,
-        '',
-        addressSelection.address.areaName3,
-        addressSelection.address.areaName1,
-        addressSelection.address.postCode,
-        addressSelection.address.country,
-      ],
-    };
-    const timestamp = Date.now();
-    const sigString = timestamp + '.' + JSON.stringify(body);
+		userTokenIds.forEach(async (tokenId) => {
+			const polybaseUrl = await contract.methods.tokenURI(tokenId).call();
+			loadPolybase(polybaseUrl);
+		});
+	}
+	async function createPolybase(params) {
+		let accounts = await web3.eth.getAccounts();
+		let addressSelection = Parser.parseLocation(value.description);
+		const streetLine = [
+			addressSelection.number,
+			addressSelection.prefix,
+			addressSelection.street,
+			addressSelection.type,
+		].join(' ');
 
-    let sig = await web3.eth.personal.sign(sigString, accounts[0]);
+		const body = {
+			args: [
+				uuidv4(),
+				description,
+				0,
+				streetLine,
+				'',
+				addressSelection.city,
+				addressSelection.state,
+				addressSelection.zip,
+				'USA',
+			],
+		};
+		const timestamp = Date.now();
+		const sigString = timestamp + '.' + JSON.stringify(body);
 
-    const xSig = `v=0,t=${timestamp},h=eth-personal-sign,sig=${sig}`;
-    const requestOptions = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Polybase-Signature': xSig,
-      },
-      body: JSON.stringify(body),
-    };
+		let sig = await web3.eth.personal.sign(sigString, accounts[0]);
 
-    fetch(
-      'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2FHouse/records',
-      requestOptions,
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        mintNft(data.data.id);
-      });
-  }
-  async function mintNft(polyBaseId) {
-    let accounts = await web3.eth.getAccounts();
-    await contract.methods
-      .create(
-        accounts[0],
-        'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2FHouse/records/' +
-          polyBaseId +
-          '?format=nft',
-      )
-      .send({ from: accounts[0] }, function (err, res) {
-        if (err) {
-          return;
-        }
-      });
-  }
-  function loadPolybase(polybaseUrl) {
-    fetch(polybaseUrl)
-      .then((response) => response.json())
-      .then((data) => {
-        if (data) {
-          setHomes((homes) => [...homes, data]);
-        }
-      });
-  }
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    createPolybase();
-  };
-  function handleDescriptionChange(e) {
-    setDescription(e.target.value);
-  }
-  function handleLine1Change(e) {
-    setLine1(e.target.value);
-  }
-  function handleLine2Change(e) {
-    setLine2(e.target.value);
-  }
-  function handleCityChange(e) {
-    setCity(e.target.value);
-  }
-  function handleZipChange(e) {
-    setZip(e.target.value);
-  }
-  function handleYearBuiltChange(e) {
-    setYearBuilt(e.target.value);
-  }
-  function handleStateChange(e) {
-    setRegion(e.target.value);
-  }
+		const xSig = `v=0,t=${timestamp},h=eth-personal-sign,sig=${sig}`;
+		const requestOptions = {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-Polybase-Signature': xSig,
+			},
+			body: JSON.stringify(body),
+		};
 
-  return (
-    <div>
-      <div className="mt-8">
-        Your Homes
-        <div className="flex flex-row">
-          {homes.map((home, index) => (
-            <Card key={index} className="w-56 mr-6">
-              <CardContent className="h-[80%]">
-                <Typography
-                  sx={{ fontSize: 14 }}
-                  color="text.secondary"
-                  gutterBottom
-                >
-                  {home.name}
-                </Typography>
-                <Typography variant="h5" component="div">
-                  {home.street1} {home.street2}
-                </Typography>
-                <Typography variant="body2">
-                  {home.city} {home.zip} {home.region} {home.country}
-                </Typography>
-              </CardContent>
-              <CardActions>
-                <Button size="small" component={Link} to={'/house/' + home.id}>
-                  Details
-                </Button>
-              </CardActions>
-            </Card>
-          ))}
-        </div>
-      </div>
-      <Button onClick={handleClickOpen}>Add Home</Button>
+		fetch(
+			'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2FHouse/records',
+			requestOptions,
+		)
+			.then((response) => response.json())
+			.then((data) => {
+				mintNft(data.data.id);
+			});
+	}
+	async function mintNft(polyBaseId) {
+		let accounts = await web3.eth.getAccounts();
+		await contract.methods
+			.create(
+				accounts[0],
+				'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2FHouse/records/' +
+					polyBaseId +
+					'?format=nft',
+			)
+			.send({ from: accounts[0] }, function (err, res) {
+				if (err) {
+					return;
+				}
+			});
+	}
+	function loadPolybase(polybaseUrl) {
+		fetch(polybaseUrl)
+			.then((response) => response.json())
+			.then((data) => {
+				if (data) {
+					setHomes((homes) => [...homes, data]);
+				}
+			});
+	}
+	const handleSubmit = async (event) => {
+		event.preventDefault();
+		createPolybase();
+	};
+	function handleDescriptionChange(e) {
+		setDescription(e.target.value);
+	}
+	function handleLine1Change(e) {
+		setLine1(e.target.value);
+	}
+	function handleLine2Change(e) {
+		setLine2(e.target.value);
+	}
+	function handleCityChange(e) {
+		setCity(e.target.value);
+	}
+	function handleZipChange(e) {
+		setZip(e.target.value);
+	}
+	function handleYearBuiltChange(e) {
+		setYearBuilt(e.target.value);
+	}
+	function handleStateChange(e) {
+		setRegion(e.target.value);
+	}
 
-      <div className="mt-8">Recent Activity</div>
+	return (
+		<div>
+			<div className="mt-8">
+				Your Homes
+				<div className="flex flex-row">
+					{homes.map((home, index) => (
+						<Card key={index} className="w-56 mr-6">
+							<CardContent className="h-[80%]">
+								<Typography
+									sx={{ fontSize: 14 }}
+									color="text.secondary"
+									gutterBottom
+								>
+									{home.name}
+								</Typography>
+								<Typography variant="h5" component="div">
+									{home.street1} {home.street2}
+								</Typography>
+								<Typography variant="body2">
+									{home.city} {home.zip} {home.region}{' '}
+									{home.country}
+								</Typography>
+							</CardContent>
+							<CardActions>
+								<Button
+									size="small"
+									component={Link}
+									to={'/house/' + home.id}
+								>
+									Details
+								</Button>
+							</CardActions>
+						</Card>
+					))}
+				</div>
+			</div>
+			<Button onClick={handleClickOpen}>Add Home</Button>
 
-      <Dialog open={open} onClose={handleClose}>
-        <form onSubmit={handleSubmit}>
-          <DialogTitle>Add New Home</DialogTitle>
-          <DialogContent>
-            <DialogContentText>Enter home information.</DialogContentText>
-            <TextField
-              autoFocus
-              margin="dense"
-              id="description"
-              label="Name"
-              fullWidth
-              onChange={handleDescriptionChange}
-            />
-            <Autocomplete
-              id="google-map-demo"
-              sx={{ width: 300 }}
-              getOptionLabel={(option) =>
-                typeof option === 'string' ? option : option.description
-              }
-              filterOptions={(x) => x}
-              options={options}
-              autoComplete
-              includeInputInList
-              filterSelectedOptions
-              value={value}
-              noOptionsText="No locations"
-              onChange={(event, newValue) => {
-                setOptions(newValue ? [newValue, ...options] : options);
-                setValue(newValue);
-              }}
-              onInputChange={(event, newInputValue) => {
-                setInputValue(newInputValue);
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Add a location" fullWidth />
-              )}
-              renderOption={(props, option) => {
-                const matches =
-                  option.structured_formatting.main_text_matched_substrings ||
-                  [];
+			<div className="mt-8">Recent Activity</div>
 
-                const parts = parse(
-                  option.structured_formatting.main_text,
-                  matches.map((match) => [
-                    match.offset,
-                    match.offset + match.length,
-                  ]),
-                );
+			<Dialog open={open} onClose={handleClose}>
+				<form onSubmit={handleSubmit}>
+					<DialogTitle>Add New Home</DialogTitle>
+					<DialogContent>
+						<DialogContentText>
+							Enter home information.
+						</DialogContentText>
+						<TextField
+							autoFocus
+							margin="dense"
+							id="description"
+							label="Name"
+							fullWidth
+							onChange={handleDescriptionChange}
+						/>
+						<Autocomplete
+							id="google-map-demo"
+							sx={{ width: 300 }}
+							getOptionLabel={(option) =>
+								typeof option === 'string'
+									? option
+									: option.description
+							}
+							filterOptions={(x) => x}
+							options={options}
+							autoComplete
+							includeInputInList
+							filterSelectedOptions
+							value={value}
+							noOptionsText="No locations"
+							onChange={(event, newValue) => {
+								setOptions(
+									newValue ? [newValue, ...options] : options,
+								);
+								setValue(newValue);
+							}}
+							onInputChange={(event, newInputValue) => {
+								setInputValue(newInputValue);
+							}}
+							renderInput={(params) => (
+								<TextField
+									{...params}
+									label="Add a location"
+									fullWidth
+								/>
+							)}
+							renderOption={(props, option) => {
+								const matches =
+									option.structured_formatting
+										.main_text_matched_substrings || [];
 
-                return (
-                  <li {...props}>
-                    <Grid container alignItems="center">
-                      <Grid item sx={{ display: 'flex', width: 44 }}>
-                        <LocationOnIcon sx={{ color: 'text.secondary' }} />
-                      </Grid>
-                      <Grid
-                        item
-                        sx={{
-                          width: 'calc(100% - 44px)',
-                          wordWrap: 'break-word',
-                        }}
-                      >
-                        {parts.map((part, index) => (
-                          <Box
-                            key={index}
-                            component="span"
-                            sx={{
-                              fontWeight: part.highlight ? 'bold' : 'regular',
-                            }}
-                          >
-                            {part.text}
-                          </Box>
-                        ))}
+								const parts = parse(
+									option.structured_formatting.main_text,
+									matches.map((match) => [
+										match.offset,
+										match.offset + match.length,
+									]),
+								);
 
-                        <Typography variant="body2" color="text.secondary">
-                          {option.structured_formatting.secondary_text}
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  </li>
-                );
-              }}
-            />
-            <div className="mt-4">Details</div>
-            <div className=" mt-2 flex flex-row">
-              <div className="flex flex-col w-1/2">
-                <span className="mb-2">
-                  <LandscapeIcon></LandscapeIcon> Lot:{lotSize}
-                </span>
-                <span>
-                  <CalendarMonthIcon></CalendarMonthIcon> Built:{yearBuilt}
-                </span>
-              </div>
-              <div className="flex flex-col w-1/2">
-                <span className="mb-2">
-                  <BedIcon></BedIcon> Bedrooms: {bedrooms}
-                </span>
-                <span>
-                  <ShowerIcon></ShowerIcon> Baths: {baths}
-                </span>
-              </div>
-            </div>
-          </DialogContent>
-          <DialogActions>
-            <Button className="mt-4" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button
-              disabled={!addressSelection || !description}
-              variant="contained"
-              type="submit"
-              onClick={handleClose}
-            >
-              Create
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-    </div>
-  );
+								return (
+									<li {...props}>
+										<Grid container alignItems="center">
+											<Grid
+												item
+												sx={{
+													display: 'flex',
+													width: 44,
+												}}
+											>
+												<LocationOnIcon
+													sx={{
+														color: 'text.secondary',
+													}}
+												/>
+											</Grid>
+											<Grid
+												item
+												sx={{
+													width: 'calc(100% - 44px)',
+													wordWrap: 'break-word',
+												}}
+											>
+												{parts.map((part, index) => (
+													<Box
+														key={index}
+														component="span"
+														sx={{
+															fontWeight:
+																part.highlight
+																	? 'bold'
+																	: 'regular',
+														}}
+													>
+														{part.text}
+													</Box>
+												))}
+
+												<Typography
+													variant="body2"
+													color="text.secondary"
+												>
+													{
+														option
+															.structured_formatting
+															.secondary_text
+													}
+												</Typography>
+											</Grid>
+										</Grid>
+									</li>
+								);
+							}}
+						/>
+						<div className="mt-4">Details</div>
+						<div className=" mt-2 flex flex-row">
+							<div className="flex flex-col w-1/2">
+								<span className="mb-2">
+									<LandscapeIcon></LandscapeIcon> Lot:
+									{lotSize}
+								</span>
+								<span>
+									<CalendarMonthIcon></CalendarMonthIcon>{' '}
+									Built:{yearBuilt}
+								</span>
+							</div>
+							<div className="flex flex-col w-1/2">
+								<span className="mb-2">
+									<BedIcon></BedIcon> Bedrooms: {bedrooms}
+								</span>
+								<span>
+									<ShowerIcon></ShowerIcon> Baths: {baths}
+								</span>
+							</div>
+						</div>
+					</DialogContent>
+					<DialogActions>
+						<Button className="mt-4" onClick={handleClose}>
+							Cancel
+						</Button>
+						<Button
+							disabled={!value || !description}
+							variant="contained"
+							type="submit"
+							onClick={handleClose}
+						>
+							Create
+						</Button>
+					</DialogActions>
+				</form>
+			</Dialog>
+		</div>
+	);
 }

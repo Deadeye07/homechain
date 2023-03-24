@@ -310,9 +310,9 @@ export default function Dashboard(params) {
 				<Typography variant="h5" color="text.secondary" gutterBottom>
 					Your Homes
 				</Typography>{' '}
-				<div className="flex flex-row mb-2">
+				<div className="flex flex-wrap flex-row mb-2">
 					{homes.map((home, index) => (
-						<Card key={index} className="w-56 mr-6">
+						<Card key={index} className="w-56 mr-6 mb-4">
 							<CardContent className="h-[75%]">
 								<Typography
 									sx={{ fontSize: 14 }}

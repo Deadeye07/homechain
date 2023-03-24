@@ -15,6 +15,7 @@ import CottageIcon from '@mui/icons-material/Cottage';
 import web3 from '../web3';
 import Fingerprint from '@mui/icons-material/Fingerprint';
 import { Link } from 'react-router-dom';
+import MetaMask from '../assets/metamask.png'
 
 const pages = ['Dashboard', 'FAQ'];
 
@@ -163,15 +164,16 @@ function ResponsiveAppBar() {
             {user ? (
               <Tooltip title="Open settings">
                 <Button
+                  color="secondary"
                   variant="contained"
-                  startIcon={<Fingerprint />}
                   onClick={handleOpenUserMenu}
                 >
-                  Acct. ...{user?.slice(-4)}
+                  <span className='pt-1'>{user?.slice(0, 4)} ... {user?.slice(-4)}</span>
+                  <img className='ml-2' width={24} src={MetaMask} alt="metamask" />
                 </Button>
               </Tooltip>
             ) : (
-              <Button variant="contained" onClick={login}>
+              <Button  variant="contained" onClick={login}>
                 Login
               </Button>
             )}

@@ -1,0 +1,22 @@
+	
+service: homechain-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  environment:
+    GOOGLE_API_KEY: ${file(./config.json):GOOGLE_API_KEY}
+
+functions:
+  api:
+    handler: index.handler
+    events:
+      - httpApi: '*'
+    
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 8000

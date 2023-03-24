@@ -23,6 +23,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import Grid from '@mui/material/Grid';
 import parse from 'autosuggest-highlight/parse';
 import { debounce } from '@mui/material/utils';
+import GooglePlacesService from '../services/GooglePlacesService';
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_MAPS;
 function loadScript(src, position, id) {
   if (!position) {
@@ -99,27 +100,27 @@ export default function Dashboard(params) {
           if (data) {
             const properties = data.individualValueVariable;
 
-            //Bedrooms PROP_BEDRMS
-            const bedRooms = properties.find(
-              (element) => element.name === 'PROP_BEDRMS',
-            );
-            setBedrooms(bedRooms.value);
+            // //Bedrooms PROP_BEDRMS
+            // const bedRooms = properties.find(
+            //   (element) => element.name === 'PROP_BEDRMS',
+            // );
+            // setBedrooms(bedRooms.value);
 
-            //Lot PROP_ACRES
-            const lotSize = properties.find(
-              (element) => element.name === 'PROP_ACRES',
-            );
-            setLotSize(lotSize.value);
-            //Year Built PROP_YRBLD
-            const yearBuilt = properties.find(
-              (element) => element.name === 'PROP_YRBLD',
-            );
-            setYearBuilt(yearBuilt.value);
-            //Baths PROP_BATHSCALC
-            const baths = properties.find(
-              (element) => element.name === 'PROP_BATHSCALC',
-            );
-            setBaths(baths.value);
+            // //Lot PROP_ACRES
+            // const lotSize = properties.find(
+            //   (element) => element.name === 'PROP_ACRES',
+            // );
+            // setLotSize(lotSize.value);
+            // //Year Built PROP_YRBLD
+            // const yearBuilt = properties.find(
+            //   (element) => element.name === 'PROP_YRBLD',
+            // );
+            // setYearBuilt(yearBuilt.value);
+            // //Baths PROP_BATHSCALC
+            // const baths = properties.find(
+            //   (element) => element.name === 'PROP_BATHSCALC',
+            // );
+            // setBaths(baths.value);
           }
         });
     }
@@ -135,13 +136,15 @@ export default function Dashboard(params) {
         autocompleteService.current.getPlacePredictions(request, callback);
       }, 400),
     [],
-  );
+    );
+    
+
   React.useEffect(() => {
     let active = true;
 
     if (!autocompleteService.current && window.google) {
       autocompleteService.current =
-        new window.google.maps.places.AutocompleteService();
+            new window.google.maps.places.AutocompleteService();
     }
     if (!autocompleteService.current) {
       return undefined;
@@ -188,18 +191,20 @@ export default function Dashboard(params) {
   }
   async function createPolybase(params) {
     let accounts = await web3.eth.getAccounts();
-
+      console.log('value:', value);
+      GooglePlacesService.getPlaceDetails(value.place_id).then((res) => { console.log(res)})
+      //console.log(value.getPlace());
     const body = {
       args: [
         uuidv4(),
         description,
         0,
-        addressSelection.address.mainAddressLine,
+        value.address.mainAddressLine,
         '',
-        addressSelection.address.areaName3,
-        addressSelection.address.areaName1,
-        addressSelection.address.postCode,
-        addressSelection.address.country,
+        value.address.areaName3,
+        value.address.areaName1,
+        value.address.postCode,
+        value.address.country,
       ],
     };
     const timestamp = Date.now();
@@ -419,7 +424,7 @@ export default function Dashboard(params) {
               Cancel
             </Button>
             <Button
-              disabled={!addressSelection || !description}
+              disabled={!value || !description}
               variant="contained"
               type="submit"
               onClick={handleClose}

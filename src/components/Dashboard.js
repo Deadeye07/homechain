@@ -25,7 +25,8 @@ import parse from 'autosuggest-highlight/parse';
 import { debounce } from '@mui/material/utils';
 import GooglePlacesService from '../services/GooglePlacesService';
 import Parser from 'parse-address';
-import { secp256k1, decodeFromString, encodeToString, EncryptedDataSecp256k1 } from '@polybase/util';
+import { aescbc, decodeFromString, encodeToString, EncryptedDataAesCbc256, secp256k1, EncryptedDataSecp256k1 } from '@polybase/util';
+import { ethPersonalSign, ethPersonalSignRecoverPublicKey } from '@polybase/eth'
 
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_MAPS;
 function loadScript(src, position, id) {
@@ -214,6 +215,40 @@ export default function Dashboard(params) {
         }
     }
 
+    //encryption - needs to separately encrypt fields
+    async function encryptData(userKey, str) {
+        // generate asymetric key pair
+        const { publicKey, privateKey } = await secp256k1.generateKeyPair();
+
+        // Convert string value to Uint8Array so it can be encrypted
+        const strDataToBeEncrypted = decodeFromString(str, 'utf8');
+
+        //encrypt address data
+        const encryptedData = await secp256k1.asymmetricEncrypt(publicKey, strDataToBeEncrypted);
+        console.log('encrypted asymetric', encryptedData);
+
+        // encrypt private key for above using user public key
+        //const encryptedPrivateKey = await aescbc.symmetricEncrypt(userKey, privateKey);
+        console.log('encrypted', encryptedData);
+
+        return {
+            version: encryptedData.version,
+            nonce: encryptedData.nonce, // Uint8array
+            ciphertext: encryptedData.ciphertext, // Uint8array
+        }
+    }
+
+    //decryption - pass in public key
+    async function decryptData(key, encryptedData) {
+        // Encrypt the data (as EncryptedDataAesCbc256)
+        const strData = await aescbc.symmetricDecrypt(key, encryptedData)
+        console.log('aesbc:', aescbc);
+        // Convert back from Uint8Array to string
+        const str = encodeToString(strData, 'utf8')
+
+        return str
+    }
+
     async function createPolybase(params) {
         let accounts = await web3.eth.getAccounts();
         const addressSelection = await parseAddressDetails();
@@ -230,12 +265,18 @@ export default function Dashboard(params) {
 				addressSelection.zip,
 				'USA',
 			],
-		};
+        };
+        
+        const encryptedBody = await encryptData(accounts[0], JSON.stringify(body));
+        console.log('encrypted', encryptedBody);
 		const timestamp = Date.now();
-		const sigString = timestamp + '.' + JSON.stringify(body);
+		const sigString = timestamp + '.' + JSON.stringify(encryptedBody);
 
 		let sig = await web3.eth.personal.sign(sigString, accounts[0]);
-
+        console.log('sig', sig);
+        // get public key for user, use to decrypt asymetric key 
+        const publicKey = ethPersonalSignRecoverPublicKey(sig, sigString);
+        console.log('public key', publicKey);
 		const xSig = `v=0,t=${timestamp},h=eth-personal-sign,sig=${sig}`;
 		const requestOptions = {
 			method: 'POST',
@@ -243,7 +284,7 @@ export default function Dashboard(params) {
 				'Content-Type': 'application/json',
 				'X-Polybase-Signature': xSig,
 			},
-			body: JSON.stringify(body),
+			body: JSON.stringify(encryptedBody),
 		};
 
 		fetch(

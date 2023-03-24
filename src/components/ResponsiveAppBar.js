@@ -132,6 +132,22 @@ function ResponsiveAppBar() {
           >
             LOGO
           </Typography>
+          <Button
+              onClick={handleCloseNavMenu}
+              component={Link}
+              to="/dashboard"
+              sx={{ my: 2, color: 'white', display: 'block' }}
+            >
+              FAQ
+          </Button>
+          <Button
+              onClick={handleCloseNavMenu}
+              component={Link}
+              to="/dashboard"
+              sx={{ my: 2, color: 'white', display: 'block' }}
+            >
+              HOWS IT WORK?
+            </Button>
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             <Button
               onClick={handleCloseNavMenu}

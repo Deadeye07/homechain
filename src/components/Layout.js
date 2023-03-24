@@ -15,9 +15,9 @@ export default function Layout(params) {
   }, [user]);
 
   return (
-    <div>
+    <div className='h-full'>
       <ResponsiveAppBar></ResponsiveAppBar>
-      <div className="p-8">
+      <div className="h-full p-8">
         <Outlet />
       </div>
       {/* <footer className="sticky bottom-0">

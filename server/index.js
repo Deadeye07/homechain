@@ -1,3 +1,9 @@
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const {
+    DynamoDBDocumentClient,
+    GetCommand,
+    PutCommand,
+} = require("@aws-sdk/lib-dynamodb");
 const serverless = require("serverless-http");
 const express = require("express");
 const cors = require("cors");
@@ -7,10 +13,14 @@ const app = express();
 app.use(cors());
 
 const googleApiKey = process.env.GOOGLE_API_KEY;
+//DynamoDB table
+const userDataTable = process.env.USER_DATA_TABLE;
+const client = new DynamoDBClient();
+const dynamoDbClient = DynamoDBDocumentClient.from(client);
 
 app.get("/", (req, res, next) => {
     return res.status(200).json({
-        message: "Hello from root!",
+        message: "API is up and running.",
     });
 });
 

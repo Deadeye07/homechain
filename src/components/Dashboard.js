@@ -25,8 +25,20 @@ import parse from 'autosuggest-highlight/parse';
 import { debounce } from '@mui/material/utils';
 import GooglePlacesService from '../services/GooglePlacesService';
 import Parser from 'parse-address';
-import { aescbc, decodeFromString, encodeToString, EncryptedDataAesCbc256, secp256k1, EncryptedDataSecp256k1 } from '@polybase/util';
-import { ethPersonalSign, ethPersonalSignRecoverPublicKey } from '@polybase/eth'
+import * as eth from '@polybase/eth';
+
+import {
+	aescbc,
+	decodeFromString,
+	encodeToString,
+	EncryptedDataAesCbc256,
+	secp256k1,
+	EncryptedDataSecp256k1,
+} from '@polybase/util';
+import {
+	ethPersonalSign,
+	ethPersonalSignRecoverPublicKey,
+} from '@polybase/eth';
 
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_MAPS;
 function loadScript(src, position, id) {
@@ -89,7 +101,6 @@ export default function Dashboard(params) {
 	};
 	useEffect(() => {
 		if (value) {
-
 			fetch(
 				'https://api.precisely.com/property/v1/all/attributes/byaddress?address=' +
 					value.description,
@@ -102,7 +113,7 @@ export default function Dashboard(params) {
 			)
 				.then((response) => response.json())
 				.then((data) => {
-                    if (data && data.individualValueVariable) {
+					if (data && data.individualValueVariable) {
 						const properties = data.individualValueVariable;
 
 						//Bedrooms PROP_BEDRMS
@@ -196,68 +207,86 @@ export default function Dashboard(params) {
 			const polybaseUrl = await contract.methods.tokenURI(tokenId).call();
 			loadPolybase(polybaseUrl);
 		});
-    }
-    
-    async function parseAddressDetails () {
-        let addressDetails = {};
-        try {
-            const placeRes = await GooglePlacesService.getPlaceDetails(value.place_id);
-            return placeRes.data;
-        } catch (error) {
-            let addressSelection = Parser.parseLocation(value.description);
-            addressSelection.streetLine = [
-                addressSelection.number,
-                addressSelection.prefix,
-                addressSelection.street,
-                addressSelection.type,
-            ].join(' ');
-            return addressSelection;
-        }
-    }
+	}
 
-    //encryption - needs to separately encrypt fields
-    async function encryptData(userKey, str) {
-        // generate asymetric key pair
-        const { publicKey, privateKey } = await secp256k1.generateKeyPair();
+	async function parseAddressDetails() {
+		let addressDetails = {};
+		try {
+			const placeRes = await GooglePlacesService.getPlaceDetails(
+				value.place_id,
+			);
+			return placeRes.data;
+		} catch (error) {
+			let addressSelection = Parser.parseLocation(value.description);
+			addressSelection.streetLine = [
+				addressSelection.number,
+				addressSelection.prefix,
+				addressSelection.street,
+				addressSelection.type,
+			].join(' ');
+			return addressSelection;
+		}
+	}
 
-        // Convert string value to Uint8Array so it can be encrypted
-        const strDataToBeEncrypted = decodeFromString(str, 'utf8');
+	//encryption - needs to separately encrypt fields
+	async function encryptData(userKey, str) {
+		// generate asymetric key pair
+		const { publicKey, privateKey } = await secp256k1.generateKeyPair();
 
-        //encrypt address data
-        const encryptedData = await secp256k1.asymmetricEncrypt(publicKey, strDataToBeEncrypted);
-        console.log('encrypted asymetric', encryptedData);
+		const encryptedBody = { args: [] };
+		//For each arg, encrypt string
+		for (params of str.args) {
+			// Convert string value to Uint8Array so it can be encrypted
+			const strDataToBeEncrypted = decodeFromString(params.toString(), 'utf8');
 
-        // encrypt private key for above using user public key
-        //const encryptedPrivateKey = await aescbc.symmetricEncrypt(userKey, privateKey);
-        console.log('encrypted', encryptedData);
+			//encrypt address data
+			const encryptedData = await secp256k1.asymmetricEncrypt(
+				publicKey,
+				strDataToBeEncrypted,
+			);
+			//console.log('encrypted asymetric', encryptedData);
+			
 
-        return {
-            version: encryptedData.version,
-            nonce: encryptedData.nonce, // Uint8array
-            ciphertext: encryptedData.ciphertext, // Uint8array
-        }
-    }
 
-    //decryption - pass in public key
-    async function decryptData(key, encryptedData) {
-        // Encrypt the data (as EncryptedDataAesCbc256)
-        const strData = await aescbc.symmetricDecrypt(key, encryptedData)
-        console.log('aesbc:', aescbc);
-        // Convert back from Uint8Array to string
-        const str = encodeToString(strData, 'utf8')
+			encryptedBody.args.push(encryptedData); // Uint8array
+		}
+		// A permission dialog will be presented to the user
+		const accounts = await eth.requestAccounts();
 
-        return str
-    }
+		// If there is more than one account, you may wish to ask the user which
+		// account they would like to use
+		const account = accounts[0];
 
-    async function createPolybase(params) {
-        let accounts = await web3.eth.getAccounts();
-        const addressSelection = await parseAddressDetails();
-        console.log(addressSelection);
+		// A permission dialog will be presented to the user
+		const encryptedValue = await eth.encrypt(
+			privateKey.toString(),
+			account,
+		);
+		encryptedBody.args.push(encryptedValue); // Uint8array
+
+		//encrypt the public key to be included in polybase
+		return encryptedBody;
+	}
+
+	//decryption - pass in public key
+	async function decryptData(key, encryptedData) {
+		// Encrypt the data (as EncryptedDataAesCbc256)
+		const strData = await aescbc.symmetricDecrypt(key, encryptedData);
+		console.log('aesbc:', aescbc);
+		// Convert back from Uint8Array to string
+		const str = encodeToString(strData, 'utf8');
+
+		return str;
+	}
+
+	async function createPolybase(params) {
+		let accounts = await web3.eth.getAccounts();
+		const addressSelection = await parseAddressDetails();
+		console.log(addressSelection);
 		const body = {
 			args: [
 				uuidv4(),
 				description,
-				0,
 				addressSelection.streetLine,
 				'',
 				addressSelection.city,
@@ -265,18 +294,20 @@ export default function Dashboard(params) {
 				addressSelection.zip,
 				'USA',
 			],
-        };
-        
-        const encryptedBody = await encryptData(accounts[0], JSON.stringify(body));
-        console.log('encrypted', encryptedBody);
+		};
+
+		const encryptedBody = await encryptData(accounts[0], body);
+
+		console.log('encrypted', encryptedBody);
 		const timestamp = Date.now();
 		const sigString = timestamp + '.' + JSON.stringify(encryptedBody);
 
 		let sig = await web3.eth.personal.sign(sigString, accounts[0]);
-        console.log('sig', sig);
-        // get public key for user, use to decrypt asymetric key 
-        const publicKey = ethPersonalSignRecoverPublicKey(sig, sigString);
-        console.log('public key', publicKey);
+		console.log('sig', sig);
+		// get public key for user, use to decrypt asymetric key
+		const publicKey = ethPersonalSignRecoverPublicKey(sig, sigString);
+		const decryptedBody = await decryptData(accounts[0], encryptedBody);
+		console.log('public key', publicKey);
 		const xSig = `v=0,t=${timestamp},h=eth-personal-sign,sig=${sig}`;
 		const requestOptions = {
 			method: 'POST',

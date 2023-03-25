@@ -150,14 +150,15 @@ function ResponsiveAppBar() {
               HOWS IT WORK?
             </Button>
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
-            <Button
+            {user ? ( <Button
               onClick={handleCloseNavMenu}
               component={Link}
               to="/dashboard"
               sx={{ my: 2, color: 'white', display: 'block' }}
             >
               Dashboard
-            </Button>
+            </Button>):''}
+            
           </Box>
 
           <Box sx={{ flexGrow: 0 }}>

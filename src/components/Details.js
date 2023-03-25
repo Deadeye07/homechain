@@ -72,6 +72,7 @@ export default function Details(params) {
 	}, []);
 
 	function loadHouseDetails() {
+		setRows([])
 		fetch(polybaseURL + 'House/records/' + id + '?format=nft')
 			.then((response) => response.json())
 			.then((data) => {
@@ -197,7 +198,7 @@ export default function Details(params) {
 
 		fetch(polybaseURL + 'Maintenance/records', createRequestOptions)
 			.then((response) => response.json())
-			.then((data) => {});
+			.then((data) => {loadHouseDetails()});
 	}
 
 	function handleDescriptionChange(e) {

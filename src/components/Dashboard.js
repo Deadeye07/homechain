@@ -221,7 +221,6 @@ export default function Dashboard(params) {
 			args: [
 				uuidv4(),
 				description,
-				0,
 				addressSelection.streetLine,
 				'',
 				addressSelection.city,

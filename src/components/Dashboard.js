@@ -269,10 +269,15 @@ export default function Dashboard(params) {
 	}
 
 	//decryption - pass in public key
-	async function decryptData(key, encryptedData) {
+	async function decryptData(account, encryptedData) {
+		debugger;
+		const key = await eth.decrypt(
+			encryptedData.args[encryptedData.args.length -1],
+			account,
+		);
+		let uint8arr = key.split(',').map((item)=>parseInt(item));
 		// Encrypt the data (as EncryptedDataAesCbc256)
-		const strData = await aescbc.symmetricDecrypt(key, encryptedData);
-		console.log('aesbc:', aescbc);
+		const strData = await secp256k1.asymmetricDecrypt(key.split(',').map((item)=>parseInt(item)), encryptedData);
 		// Convert back from Uint8Array to string
 		const str = encodeToString(strData, 'utf8');
 

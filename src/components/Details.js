@@ -96,7 +96,7 @@ export default function Details(params) {
 					)
 						.then((response) => response.json())
 						.then((data) => {
-							if (data) {
+							if (data?.individualValueVariable) {
 								const properties = data.individualValueVariable;
 
 								//Bedrooms PROP_BEDRMS
@@ -130,7 +130,7 @@ export default function Details(params) {
 		fetch(polybaseURL + 'Maintenance/records/' + id + '?format=nft')
 			.then((response) => response.json())
 			.then((data) => {
-				if (data.id) {
+				if (data?.id) {
 					setRows((oldArray) => [...oldArray, data]);
 				}
 			});

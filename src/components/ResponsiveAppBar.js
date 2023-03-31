@@ -17,7 +17,7 @@ import Fingerprint from '@mui/icons-material/Fingerprint';
 import { Link } from 'react-router-dom';
 import MetaMask from '../assets/metamask.png'
 
-const pages = ['Dashboard', 'FAQ'];
+const pages = ['Dashboard', 'FAQ', 'HOWS IT WORK?'];
 
 function ResponsiveAppBar() {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
@@ -114,7 +114,7 @@ function ResponsiveAppBar() {
               ))}
             </Menu>
           </Box>
-          <AdbIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
+          <CottageIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
           <Typography
             variant="h5"
             noWrap
@@ -131,13 +131,13 @@ function ResponsiveAppBar() {
               textDecoration: 'none',
             }}
           >
-            LOGO
+            HomeChain
           </Typography>
           <Button
               onClick={handleCloseNavMenu}
               component={Link}
-              to="/dashboard"
-              sx={{ my: 2, color: 'white', display: 'block' }}
+            to="/dashboard"
+              sx={{ my: 2, color: 'white', display: { xs: 'none', md: 'block' }}}
             >
               FAQ
           </Button>
@@ -145,7 +145,7 @@ function ResponsiveAppBar() {
               onClick={handleCloseNavMenu}
               component={Link}
               to="/dashboard"
-              sx={{ my: 2, color: 'white', display: 'block' }}
+              sx={{ my: 2, color: 'white', display: { xs: 'none', md: 'block' }}}
             >
               HOWS IT WORK?
             </Button>

@@ -20,8 +20,7 @@ export default function CreateMaintDialog(props) {
 	const [contractor, setContractor] = useState('');
 	const [cost, setCost] = useState('');
 	const [date, setDate] = useState('');
-	const polybaseURL =
-		'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2F';
+	const polybaseURL = process.env.REACT_APP_POLYBASE_URL;
 
 	async function handleSubmit(event) {
 		event.preventDefault();

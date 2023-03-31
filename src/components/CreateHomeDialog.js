@@ -40,7 +40,7 @@ export default function CreateHomeDialog(props) {
 	const [value, setValue] = React.useState(null);
 	const [inputValue, setInputValue] = React.useState('');
 	const [options, setOptions] = React.useState([]);
-	const [description, setDescription] = useState('');	
+	const [description, setDescription] = useState('');
 	const [lotSize, setLotSize] = React.useState('');
 	const [bedrooms, setBedrooms] = React.useState('');
 	const [baths, setBaths] = React.useState('');
@@ -226,7 +226,8 @@ export default function CreateHomeDialog(props) {
 		await contract.methods
 			.create(
 				accounts[0],
-				'https://testnet.polybase.xyz/v0/collections/pk%2F0x65bb9eddbc7ec3b600d8e7068574966902d1ece4e22ccc0d2724ac0319264bd3832dd1cbac4899fd9be05e474dd26b9dfde43e5c54c9591a4be12c6b3f79bd2b%2FHomeChain%2FHouse/records/' +
+				process.env.REACT_APP_POLYBASE_URL +
+					'House/records/' +
 					polyBaseId +
 					'?format=nft',
 			)

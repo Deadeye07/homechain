@@ -237,18 +237,19 @@ export default function Dashboard(params) {
 		//For each arg, encrypt string
 		for (params of str.args) {
 			// Convert string value to Uint8Array so it can be encrypted
-			const strDataToBeEncrypted = decodeFromString(params.toString(), 'utf8');
+			const strDataToBeEncrypted = decodeFromString(
+				params.toString(),
+				'utf8',
+			);
 
 			//encrypt address data
 			const encryptedData = await secp256k1.asymmetricEncrypt(
 				publicKey,
 				strDataToBeEncrypted,
 			);
-			//console.log('encrypted asymetric', encryptedData);
-			
-
-
-			encryptedBody.args.push(encryptedData); // Uint8array
+			console.log('encrypted asymetric', encryptedData);
+		
+			encryptedBody.args.push(JSON.stringify(encryptedData)); // Uint8array
 		}
 		// A permission dialog will be presented to the user
 		const accounts = await eth.requestAccounts();
@@ -257,9 +258,12 @@ export default function Dashboard(params) {
 		// account they would like to use
 		const account = accounts[0];
 
+		debugger;
+		console.log('Private Key:' + privateKey)
+
 		// A permission dialog will be presented to the user
 		const encryptedValue = await eth.encrypt(
-			privateKey.toString(),
+			encodeToString(privateKey, 'base64'),
 			account,
 		);
 		encryptedBody.args.push(encryptedValue); // Uint8array
@@ -270,18 +274,31 @@ export default function Dashboard(params) {
 
 	//decryption - pass in public key
 	async function decryptData(account, encryptedData) {
-		debugger;
+		const decryptedData = [];
 		const key = await eth.decrypt(
-			encryptedData.args[encryptedData.args.length -1],
+			encryptedData.args[encryptedData.args.length - 1],
 			account,
 		);
-		let uint8arr = key.split(',').map((item)=>parseInt(item));
-		// Encrypt the data (as EncryptedDataAesCbc256)
-		const strData = await secp256k1.asymmetricDecrypt(key.split(',').map((item)=>parseInt(item)), encryptedData);
-		// Convert back from Uint8Array to string
-		const str = encodeToString(strData, 'utf8');
+		const unitKey =decodeFromString(key,'base64');
+		encryptedData.args.forEach(async (params, index) => {
 
-		return str;
+			if (index === encryptedData.args.length - 1) {
+				return
+			}
+		
+			debugger;
+			// Encrypt the data (as EncryptedDataAesCbc256)
+			const strData = await secp256k1.asymmetricDecrypt(
+				unitKey,
+				params
+			);
+			// Convert back from Uint8Array to string
+			const str = encodeToString(strData, 'utf8');
+			decryptedData.push(str);
+			console.log('Decrypted Data: '+decryptedData)
+		});
+
+		return decryptedData;
 	}
 
 	async function createPolybase(params) {
